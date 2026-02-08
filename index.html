@@ -114,5 +114,215 @@ draw();
 </script>
 </body>
 </html>
-	
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Pixel Rogue RPG</title>
+<style>
+  body {
+    margin: 0;
+    background: #111;
+    color: white;
+    text-align: center;
+    font-family: sans-serif;
+  }
+  canvas {
+    background: black;
+    display: block;
+    margin: auto;
+    border: 2px solid #555;
+  }
+  button {
+    font-size: 18px;
+    margin: 5px;
+  }
+</style>
+</head>
+<body>
+
+<h2 id="title">스탯 분배 (총 12)</h2>
+
+<div id="stats">
+  스피드: <span id="speed">0</span>
+  <button onclick="changeStat('speed',1)">+</button>
+  <button onclick="changeStat('speed',-1)">-</button><br>
+
+  체력: <span id="hp">0</span>
+  <button onclick="changeStat('hp',1)">+</button>
+  <button onclick="changeStat('hp',-1)">-</button><br>
+
+  공격: <span id="atk">0</span>
+  <button onclick="changeStat('atk',1)">+</button>
+  <button onclick="changeStat('atk',-1)">-</button><br>
+
+  <p>남은 포인트: <span id="points">12</span></p>
+  <button onclick="startGame()">게임 시작</button>
+</div>
+
+<canvas id="game" width="900" height="600" style="display:none;"></canvas>
+
+<script>
+let totalPoints = 12;
+let player = { speed:0, hp:0, atk:0 };
+let isDay = true;
+
+function changeStat(stat, value) {
+  if (value > 0 && totalPoints === 0) return;
+  if (value < 0 && player[stat] === 0) return;
+
+  player[stat] += value;
+  totalPoints -= value;
+
+  document.getElementById(stat === 'speed' ? 'speed' : stat).innerText = player[stat];
+  document.getElementById('points').innerText = totalPoints;
+}
+
+function startGame() {
+  if (totalPoints !== 0) {
+    alert("포인트를 모두 사용해야 합니다!");
+    return;
+  }
+  document.getElementById('stats').style.display = "none";
+  document.getElementById('title').style.display = "none";
+  document.getElementById('game').style.display = "block";
+  drawGame();
+}
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+function drawGame() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  ctx.fillStyle = "white";
+  ctx.font = "20px Arial";
+  ctx.fillText(isDay ? "🌞 DAY" : "🌙 NIGHT", 20, 30);
+
+  // 적
+  ctx.fillStyle = "red";
+  ctx.fillRect(400, 150, 100, 100);
+
+  // 플레이어
+  ctx.fillStyle = "blue";
+  ctx.fillRect(400, 350, 100, 100);
+
+  // 스탯 표시
+  ctx.fillStyle = "white";
+  ctx.fillText(`HP:${player.hp}  ATK:${player.atk}  SPD:${player.speed}`, 20, 570);
+}
+
+// 낮/밤 전환 (테스트용)
+setInterval(() => {
+  isDay = !isDay;
+  drawGame();
+}, 5000);
+</script>
+	<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Pixel Rogue RPG</title>
+<style>
+  body {
+    margin: 0;
+    background: #111;
+    color: white;
+    text-align: center;
+    font-family: sans-serif;
+  }
+  canvas {
+    background: black;
+    display: block;
+    margin: auto;
+    border: 2px solid #555;
+  }
+  button {
+    font-size: 18px;
+    margin: 5px;
+  }
+</style>
+</head>
+<body>
+
+<h2 id="title">스탯 분배 (총 12)</h2>
+
+<div id="stats">
+  스피드: <span id="speed">0</span>
+  <button onclick="changeStat('speed',1)">+</button>
+  <button onclick="changeStat('speed',-1)">-</button><br>
+
+  체력: <span id="hp">0</span>
+  <button onclick="changeStat('hp',1)">+</button>
+  <button onclick="changeStat('hp',-1)">-</button><br>
+
+  공격: <span id="atk">0</span>
+  <button onclick="changeStat('atk',1)">+</button>
+  <button onclick="changeStat('atk',-1)">-</button><br>
+
+  <p>남은 포인트: <span id="points">12</span></p>
+  <button onclick="startGame()">게임 시작</button>
+</div>
+
+<canvas id="game" width="900" height="600" style="display:none;"></canvas>
+
+<script>
+let totalPoints = 12;
+let player = { speed:0, hp:0, atk:0 };
+let isDay = true;
+
+function changeStat(stat, value) {
+  if (value > 0 && totalPoints === 0) return;
+  if (value < 0 && player[stat] === 0) return;
+
+  player[stat] += value;
+  totalPoints -= value;
+
+  document.getElementById(stat === 'speed' ? 'speed' : stat).innerText = player[stat];
+  document.getElementById('points').innerText = totalPoints;
+}
+
+function startGame() {
+  if (totalPoints !== 0) {
+    alert("포인트를 모두 사용해야 합니다!");
+    return;
+  }
+  document.getElementById('stats').style.display = "none";
+  document.getElementById('title').style.display = "none";
+  document.getElementById('game').style.display = "block";
+  drawGame();
+}
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+function drawGame() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  ctx.fillStyle = "white";
+  ctx.font = "20px Arial";
+  ctx.fillText(isDay ? "🌞 DAY" : "🌙 NIGHT", 20, 30);
+
+  // 적
+  ctx.fillStyle = "red";
+  ctx.fillRect(400, 150, 100, 100);
+
+  // 플레이어
+  ctx.fillStyle = "blue";
+  ctx.fillRect(400, 350, 100, 100);
+
+  // 스탯 표시
+  ctx.fillStyle = "white";
+  ctx.fillText(`HP:${player.hp}  ATK:${player.atk}  SPD:${player.speed}`, 20, 570);
+}
+
+// 낮/밤 전환 (테스트용)
+setInterval(() => {
+  isDay = !isDay;
+  drawGame();
+}, 5000);
+</script>
+
+</body>
+</html>
 	
