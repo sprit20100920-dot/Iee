@@ -21,6 +21,11 @@ button {
   font-size: 18px;
   margin: 5px;
 }
+#controlUI button {
+  font-size: 26px;
+  width: 60px;
+  height: 60px;
+}
 </style>
 </head>
 <body>
@@ -47,7 +52,14 @@ button {
 <canvas id="game" width="900" height="600" style="display:none;"></canvas>
 
 <div id="battleUI" style="display:none;">
-  <button onclick="attack()">공격</button>
+  <button onclick="playerAttack()">공격</button>
+</div>
+
+<div id="controlUI" style="display:none;">
+  <button onclick="move('up')">⬆️</button><br>
+  <button onclick="move('left')">⬅️</button>
+  <button onclick="move('down')">⬇️</button>
+  <button onclick="move('right')">➡️</button>
 </div>
 
 <script>
@@ -64,10 +76,13 @@ let player = {
 };
 
 let monster = {};
-let turn = 1;
-let turnInPhase = 1;
+let phaseTurn = 1; // 낮/밤 안에서의 턴
 let isDay = true;
+let playerTurn = true;
 
+/* =====================
+   캔버스
+===================== */
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
@@ -98,54 +113,94 @@ function startGame() {
   document.getElementById("title").style.display = "none";
   canvas.style.display = "block";
   document.getElementById("battleUI").style.display = "block";
+  document.getElementById("controlUI").style.display = "block";
 
-  nextMonster();
+  spawnMonster();
   draw();
 }
 
 /* =====================
    몬스터 생성
 ===================== */
-function nextMonster() {
+function spawnMonster() {
   monster = {
     maxHp: isDay ? 30 : 50,
     hp: isDay ? 30 : 50,
     atk: isDay ? 5 : 10
   };
+  playerTurn = true;
 }
 
 /* =====================
-   전투
+   전투 (턴제)
 ===================== */
-function attack() {
-  // 플레이어 공격
-  monster.hp -= player.atk;
+function playerAttack() {
+  if (!playerTurn) return;
 
-  // 몬스터 반격
-  if (monster.hp > 0) {
-    player.hp -= monster.atk;
+  monster.hp -= player.atk;
+  playerTurn = false;
+
+  if (monster.hp <= 0) {
+    endBattle();
+    return;
   }
 
-  // 전투 종료
-  if (monster.hp <= 0 || player.hp <= 0) {
-    endBattle();
+  setTimeout(monsterAttack, 500);
+}
+
+function monsterAttack() {
+  player.hp -= monster.atk;
+  playerTurn = true;
+
+  if (player.hp <= 0) {
+    alert("게임 오버");
+    location.reload();
   }
 
   draw();
 }
 
 function endBattle() {
-  turn++;
-  turnInPhase++;
+  phaseTurn++;
 
-  if (turnInPhase > 5) {
-    isDay = !
-      function move(dir) {
-  console.log("방향 버튼 입력:", dir);
+  if (phaseTurn > 5) {
+    isDay = !isDay;
+    phaseTurn = 1;
+  }
 
-  // 현재는 이동 없음
-  // 이후 활용 예:
-  // dir === 'left'  → 타겟 변경
-  // dir === 'right' → 타겟 변경
-  // dir === 'up'    → 메뉴 위
-  // dir === 'down'  → 메뉴 아래
+  spawnMonster();
+  draw();
+}
+
+/* =====================
+   방향 버튼 (지금은 로그만)
+===================== */
+function move(dir) {
+  console.log("방향 입력:", dir);
+}
+
+/* =====================
+   화면 그리기
+===================== */
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = "white";
+  ctx.font = "20px Arial";
+  ctx.fillText(isDay ? "🌞 DAY" : "🌙 NIGHT", 20, 30);
+  ctx.fillText("턴: " + phaseTurn + " / 5", 20, 60);
+
+  // 몬스터
+  ctx.fillStyle = "red";
+  ctx.fillRect(400, 120, 100, 100);
+  ctx.fillText("몬스터 HP: " + monster.hp, 380, 100);
+
+  // 플레이어
+  ctx.fillStyle = "blue";
+  ctx.fillRect(400, 350, 100, 100);
+  ctx.fillText("플레이어 HP: " + player.hp, 360, 480);
+}
+</script>
+
+</body>
+</html>
