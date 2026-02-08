@@ -45,7 +45,18 @@ button {
   <button onclick="closeChest()">닫기</button>
 </div>
 
+<div id="inventoryUI" style="display:none;">
+  <h3>🎒 인벤토리</h3>
+  <div id="itemList"></div>
+  <hr>
+  <p id="itemDesc">아이템을 선택하세요</p>
+  <button id="useItemBtn" onclick="useItem()" style="display:none;">사용</button>
+  <br>
+  <button onclick="toggleInventory()">닫기</button>
+</div>
+
 <div id="controlUI">
+  <button onclick="toggleInventory()">🎒</button><br>
   <button onclick="explore()">⬆️</button><br>
   <button onclick="explore()">⬅️</button>
   <button onclick="explore()">⬇️</button>
@@ -53,15 +64,16 @@ button {
 </div>
 
 <script>
-/* ===== 기본 ===== */
 const ctx = document.getElementById("game").getContext("2d");
 
+/* ===== 플레이어 ===== */
 let player = {
-  hp:10,
-  maxHp:10,
-  atk:3
+  hp: 10,
+  maxHp: 10,
+  atk: 3
 };
 
+/* ===== 상태 ===== */
 let monster = null;
 let inBattle = false;
 let playerTurn = true;
@@ -77,12 +89,11 @@ let turnCount = 0;
 /* ===== 화면 ===== */
 function draw() {
   ctx.clearRect(0,0,900,600);
-
   ctx.fillStyle="white";
+
   ctx.fillText(`HP: ${player.hp}/${player.maxHp}`,20,30);
   ctx.fillText(`ATK: ${player.atk}`,20,50);
   ctx.fillText(`Gold: ${gold}`,20,70);
-  ctx.fillText(`Inventory: ${inventory.join(", ")}`,20,90);
 
   if (monster) {
     ctx.fillText(`몬스터 HP: ${monster.hp}`,650,30);
@@ -95,16 +106,9 @@ function explore() {
   if (inBattle) return;
 
   const roll = Math.random();
-
-  if (roll < 0.4) {
-    spawnMonster();
-  }
-  else if (roll < 0.6) {
-    openChest();
-  }
-  else {
-    alert("아무 일도 일어나지 않았다");
-  }
+  if (roll < 0.4) spawnMonster();
+  else if (roll < 0.6) openChest();
+  else alert("아무 일도 일어나지 않았다");
 }
 
 /* ===== 몬스터 ===== */
@@ -150,23 +154,19 @@ function endBattle() {
   monster = null;
   document.getElementById("battleUI").style.display="none";
 
-  // 턴 증가
   turnCount++;
   if (turnCount % 5 === 0) {
     isDay = !isDay;
-    document.getElementById("timeText").innerText =
-      isDay ? "🌞 낮" : "🌙 밤";
+    document.getElementById("timeText").innerText = isDay ? "🌞 낮" : "🌙 밤";
   }
 
-  // 나뭇가지 감소
   if (stickTurns > 0) {
     stickTurns--;
     if (stickTurns === 0) {
       player.atk--;
-      inventory = inventory.filter(i => i !== "나뭇가지");
+      inventory = inventory.filter(i => i.name !== "나뭇가지");
     }
   }
-
   draw();
 }
 
@@ -182,8 +182,12 @@ function rollChest() {
   if (roll <= 2) {
     player.atk++;
     stickTurns = 3;
-    inventory.push("나뭇가지");
-    text += "나뭇가지 획득 (공격 +1)";
+    inventory.push({
+      name:"나뭇가지",
+      type:"weapon",
+      desc:"공격 +1 (3전투 후 파괴)"
+    });
+    text += "나뭇가지 획득!";
   }
   else if (roll <= 4) {
     gold++;
@@ -201,10 +205,7 @@ function rollChest() {
 }
 
 function spawnMimic() {
-  monster = {
-    hp:1,
-    atk:1
-  };
+  monster = { hp:1, atk:1 };
   inBattle = true;
   playerTurn = false;
   closeChest();
@@ -214,6 +215,52 @@ function spawnMimic() {
 
 function closeChest() {
   document.getElementById("chestUI").style.display="none";
+}
+
+/* ===== 인벤토리 ===== */
+let selectedItemIndex = null;
+
+function toggleInventory() {
+  const ui = document.getElementById("inventoryUI");
+  ui.style.display = ui.style.display === "none" ? "block" : "none";
+  renderInventory();
+}
+
+function renderInventory() {
+  const list = document.getElementById("itemList");
+  list.innerHTML = "";
+
+  inventory.forEach((item, idx) => {
+    const btn = document.createElement("button");
+    btn.innerText = item.name;
+    btn.onclick = () => selectItem(idx);
+    list.appendChild(btn);
+  });
+
+  if (inventory.length === 0) list.innerText = "비어 있음";
+  document.getElementById("itemDesc").innerText = "아이템을 선택하세요";
+  document.getElementById("useItemBtn").style.display="none";
+}
+
+function selectItem(idx) {
+  selectedItemIndex = idx;
+  const item = inventory[idx];
+  document.getElementById("itemDesc").innerText = item.desc;
+  document.getElementById("useItemBtn").style.display =
+    item.type === "consumable" ? "inline-block" : "none";
+}
+
+function useItem() {
+  if (selectedItemIndex === null) return;
+  const item = inventory[selectedItemIndex];
+
+  if (item.type === "consumable") {
+    player.hp = Math.min(player.maxHp, player.hp + 3);
+    inventory.splice(selectedItemIndex,1);
+    selectedItemIndex = null;
+    renderInventory();
+    draw();
+  }
 }
 </script>
 </body>
