@@ -8,18 +8,18 @@
     margin: 0;
     background: #111;
     color: white;
-    text-align: center;
     font-family: sans-serif;
+    text-align: center;
   }
   canvas {
-    background: black;
     display: block;
     margin: auto;
+    background: black;
     border: 2px solid #555;
   }
   button {
     font-size: 18px;
-    margin: 5px;
+    margin: 4px;
   }
 </style>
 </head>
@@ -27,7 +27,7 @@
 
 <h2 id="title">스탯 분배 (총 12)</h2>
 
-<div id="stats">
+<div id="statUI">
   스피드: <span id="speed">0</span>
   <button onclick="changeStat('speed',1)">+</button>
   <button onclick="changeStat('speed',-1)">-</button><br>
@@ -47,10 +47,26 @@
 <canvas id="game" width="900" height="600" style="display:none;"></canvas>
 
 <script>
+/* =====================
+   기본 데이터
+===================== */
 let totalPoints = 12;
-let player = { speed:0, hp:0, atk:0 };
-let isDay = true;
 
+let player = {
+  speed: 0,
+  maxHp: 0,
+  hp: 0,
+  atk: 0
+};
+
+let isDay = true; // 낮 / 밤
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+/* =====================
+   스탯 분배
+===================== */
 function changeStat(stat, value) {
   if (value > 0 && totalPoints === 0) return;
   if (value < 0 && player[stat] === 0) return;
@@ -67,40 +83,55 @@ function startGame() {
     alert("포인트를 모두 사용해야 합니다!");
     return;
   }
-  document.getElementById('stats').style.display = "none";
-  document.getElementById('title').style.display = "none";
-  document.getElementById('game').style.display = "block";
-  drawGame();
+
+  player.maxHp = player.hp * 10;
+  player.hp = player.maxHp;
+
+  document.getElementById("statUI").style.display = "none";
+  document.getElementById("title").style.display = "none";
+  canvas.style.display = "block";
+
+  draw();
 }
 
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+/* =====================
+   게임 화면 그리기
+===================== */
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-function drawGame() {
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-
+  // 낮 / 밤 표시
   ctx.fillStyle = "white";
   ctx.font = "20px Arial";
   ctx.fillText(isDay ? "🌞 DAY" : "🌙 NIGHT", 20, 30);
 
-  // 적
-  ctx.fillStyle = "red";
-  ctx.fillRect(400, 150, 100, 100);
+  // 적 (임시)
+  ctx.fillStyle = isDay ? "darkred" : "red";
+  ctx.fillRect(400, 120, 100, 100);
+  ctx.fillStyle = "white";
+  ctx.fillText("적", 440, 180);
 
   // 플레이어
   ctx.fillStyle = "blue";
   ctx.fillRect(400, 350, 100, 100);
+  ctx.fillStyle = "white";
+  ctx.fillText("플레이어", 420, 415);
 
   // 스탯 표시
-  ctx.fillStyle = "white";
-  ctx.fillText(`HP:${player.hp}  ATK:${player.atk}  SPD:${player.speed}`, 20, 570);
+  ctx.fillText(
+    `HP: ${player.hp}/${player.maxHp}  ATK: ${player.atk}  SPD: ${player.speed}`,
+    20, 570
+  );
 }
 
-// 낮/밤 전환 (테스트용)
+/* =====================
+   낮 / 밤 전환 (테스트용)
+===================== */
 setInterval(() => {
+  if (canvas.style.display === "none") return;
   isDay = !isDay;
-  drawGame();
-}, 5000);
+  draw();
+}, 7000);
 </script>
 
 </body>
