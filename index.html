@@ -5,202 +5,216 @@
 <title>Pixel Rogue RPG</title>
 <style>
 body {
-  margin: 0;
-  background: #111;
-  color: white;
-  font-family: sans-serif;
-  text-align: center;
+  background:#111;
+  color:white;
+  text-align:center;
+  font-family:sans-serif;
 }
 canvas {
-  background: black;
-  display: block;
-  margin: auto;
-  border: 2px solid #555;
+  border:2px solid #555;
+  margin:auto;
+  display:block;
+  background:black;
+  pointer-events:none;
 }
 button {
-  font-size: 18px;
-  margin: 5px;
+  font-size:18px;
+  margin:5px;
 }
 #controlUI button {
-  font-size: 26px;
-  width: 60px;
-  height: 60px;
+  width:60px;
+  height:60px;
+  font-size:26px;
 }
 </style>
 </head>
 <body>
 
-<h2 id="title">스탯 분배 (총 12)</h2>
+<h2 id="timeText">🌞 낮</h2>
 
-<div id="statUI">
-  스피드: <span id="speed">0</span>
-  <button onclick="changeStat('speed',1)">+</button>
-  <button onclick="changeStat('speed',-1)">-</button><br>
-
-  체력: <span id="hp">0</span>
-  <button onclick="changeStat('hp',1)">+</button>
-  <button onclick="changeStat('hp',-1)">-</button><br>
-
-  공격: <span id="atk">0</span>
-  <button onclick="changeStat('atk',1)">+</button>
-  <button onclick="changeStat('atk',-1)">-</button><br>
-
-  <p>남은 포인트: <span id="points">12</span></p>
-  <button onclick="startGame()">게임 시작</button>
-</div>
-
-<canvas id="game" width="900" height="600" style="display:none;"></canvas>
+<canvas id="game" width="900" height="600"></canvas>
 
 <div id="battleUI" style="display:none;">
   <button onclick="playerAttack()">공격</button>
 </div>
 
-<div id="controlUI" style="display:none;">
-  <button onclick="move('up')">⬆️</button><br>
-  <button onclick="move('left')">⬅️</button>
-  <button onclick="move('down')">⬇️</button>
-  <button onclick="move('right')">➡️</button>
+<div id="chestUI" style="display:none;">
+  <h3>📦 상자</h3>
+  <button onclick="rollChest()">상자 열기</button>
+  <p id="chestResult"></p>
+  <button onclick="closeChest()">닫기</button>
+</div>
+
+<div id="controlUI">
+  <button onclick="explore()">⬆️</button><br>
+  <button onclick="explore()">⬅️</button>
+  <button onclick="explore()">⬇️</button>
+  <button onclick="explore()">➡️</button>
 </div>
 
 <script>
-/* =====================
-   기본 데이터
-===================== */
-let totalPoints = 12;
+/* ===== 기본 ===== */
+const ctx = document.getElementById("game").getContext("2d");
 
 let player = {
-  speed: 0,
-  atk: 0,
-  maxHp: 0,
-  hp: 0
+  hp:10,
+  maxHp:10,
+  atk:3
 };
 
-let monster = {};
-let phaseTurn = 1; // 낮/밤 안에서의 턴
-let isDay = true;
+let monster = null;
+let inBattle = false;
 let playerTurn = true;
 
-/* =====================
-   캔버스
-===================== */
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+let gold = 0;
+let inventory = [];
+let stickTurns = 0;
 
-/* =====================
-   스탯 분배
-===================== */
-function changeStat(stat, value) {
-  if (value > 0 && totalPoints === 0) return;
-  if (value < 0 && player[stat] === 0) return;
+/* ===== 낮 / 밤 ===== */
+let isDay = true;
+let turnCount = 0;
 
-  player[stat] += value;
-  totalPoints -= value;
+/* ===== 화면 ===== */
+function draw() {
+  ctx.clearRect(0,0,900,600);
 
-  document.getElementById(stat === 'speed' ? 'speed' : stat).innerText = player[stat];
-  document.getElementById('points').innerText = totalPoints;
+  ctx.fillStyle="white";
+  ctx.fillText(`HP: ${player.hp}/${player.maxHp}`,20,30);
+  ctx.fillText(`ATK: ${player.atk}`,20,50);
+  ctx.fillText(`Gold: ${gold}`,20,70);
+  ctx.fillText(`Inventory: ${inventory.join(", ")}`,20,90);
+
+  if (monster) {
+    ctx.fillText(`몬스터 HP: ${monster.hp}`,650,30);
+  }
+}
+draw();
+
+/* ===== 탐색 ===== */
+function explore() {
+  if (inBattle) return;
+
+  const roll = Math.random();
+
+  if (roll < 0.4) {
+    spawnMonster();
+  }
+  else if (roll < 0.6) {
+    openChest();
+  }
+  else {
+    alert("아무 일도 일어나지 않았다");
+  }
 }
 
-function startGame() {
-  if (totalPoints !== 0) {
-    alert("포인트를 모두 사용하세요!");
-    return;
-  }
-
-  player.maxHp = player.hp * 10;
-  player.hp = player.maxHp;
-
-  document.getElementById("statUI").style.display = "none";
-  document.getElementById("title").style.display = "none";
-  canvas.style.display = "block";
-  document.getElementById("battleUI").style.display = "block";
-  document.getElementById("controlUI").style.display = "block";
-
-  spawnMonster();
+/* ===== 몬스터 ===== */
+function spawnMonster() {
+  monster = {
+    hp: isDay ? 5 : 7,
+    atk: isDay ? 2 : 3
+  };
+  inBattle = true;
+  playerTurn = true;
+  document.getElementById("battleUI").style.display="block";
   draw();
 }
 
-/* =====================
-   몬스터 생성
-===================== */
-function spawnMonster() {
-  monster = {
-    maxHp: isDay ? 30 : 50,
-    hp: isDay ? 30 : 50,
-    atk: isDay ? 5 : 10
-  };
-  playerTurn = true;
-}
-
-/* =====================
-   전투 (턴제)
-===================== */
+/* ===== 전투 ===== */
 function playerAttack() {
-  if (!playerTurn) return;
+  if (!playerTurn || !inBattle) return;
 
   monster.hp -= player.atk;
   playerTurn = false;
+  draw();
 
   if (monster.hp <= 0) {
     endBattle();
     return;
   }
-
-  setTimeout(monsterAttack, 500);
+  setTimeout(monsterAttack,500);
 }
 
 function monsterAttack() {
   player.hp -= monster.atk;
   playerTurn = true;
+  draw();
 
   if (player.hp <= 0) {
     alert("게임 오버");
     location.reload();
   }
-
-  draw();
 }
 
 function endBattle() {
-  phaseTurn++;
+  inBattle = false;
+  monster = null;
+  document.getElementById("battleUI").style.display="none";
 
-  if (phaseTurn > 5) {
+  // 턴 증가
+  turnCount++;
+  if (turnCount % 5 === 0) {
     isDay = !isDay;
-    phaseTurn = 1;
+    document.getElementById("timeText").innerText =
+      isDay ? "🌞 낮" : "🌙 밤";
   }
 
-  spawnMonster();
+  // 나뭇가지 감소
+  if (stickTurns > 0) {
+    stickTurns--;
+    if (stickTurns === 0) {
+      player.atk--;
+      inventory = inventory.filter(i => i !== "나뭇가지");
+    }
+  }
+
   draw();
 }
 
-/* =====================
-   방향 버튼 (지금은 로그만)
-===================== */
-function move(dir) {
-  console.log("방향 입력:", dir);
+/* ===== 상자 ===== */
+function openChest() {
+  document.getElementById("chestUI").style.display="block";
 }
 
-/* =====================
-   화면 그리기
-===================== */
-function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+function rollChest() {
+  const roll = Math.floor(Math.random()*6)+1;
+  let text = `주사위 ${roll}: `;
 
-  ctx.fillStyle = "white";
-  ctx.font = "20px Arial";
-  ctx.fillText(isDay ? "🌞 DAY" : "🌙 NIGHT", 20, 30);
-  ctx.fillText("턴: " + phaseTurn + " / 5", 20, 60);
+  if (roll <= 2) {
+    player.atk++;
+    stickTurns = 3;
+    inventory.push("나뭇가지");
+    text += "나뭇가지 획득 (공격 +1)";
+  }
+  else if (roll <= 4) {
+    gold++;
+    text += "골드 +1";
+  }
+  else {
+    text += "미믹 등장!";
+    document.getElementById("chestResult").innerText=text;
+    spawnMimic();
+    return;
+  }
 
-  // 몬스터
-  ctx.fillStyle = "red";
-  ctx.fillRect(400, 120, 100, 100);
-  ctx.fillText("몬스터 HP: " + monster.hp, 380, 100);
+  document.getElementById("chestResult").innerText=text;
+  draw();
+}
 
-  // 플레이어
-  ctx.fillStyle = "blue";
-  ctx.fillRect(400, 350, 100, 100);
-  ctx.fillText("플레이어 HP: " + player.hp, 360, 480);
+function spawnMimic() {
+  monster = {
+    hp:1,
+    atk:1
+  };
+  inBattle = true;
+  playerTurn = false;
+  closeChest();
+  draw();
+  setTimeout(monsterAttack,500);
+}
+
+function closeChest() {
+  document.getElementById("chestUI").style.display="none";
 }
 </script>
-
 </body>
 </html>
