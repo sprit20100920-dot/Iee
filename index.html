@@ -15,9 +15,9 @@ button{margin:4px;font-size:15px;}
 </head>
 <body class="day">
 
-<!-- 시작 -->
+<!-- 시작 화면 -->
 <div id="startUI">
-<h2>스탯 분배 (12)</h2>
+<h2>스탯 분배 (총 9)</h2>
 SPD <span id="spd">0</span>
 <button onclick="stat('spd',1)">+</button>
 <button onclick="stat('spd',-1)">-</button><br>
@@ -27,10 +27,11 @@ HP <span id="hp">0</span> (최대 9)
 ATK <span id="atk">0</span>
 <button onclick="stat('atk',1)">+</button>
 <button onclick="stat('atk',-1)">-</button><br>
-남은 포인트 <span id="pt">12</span><br>
+남은 포인트 <span id="pt">9</span><br>
 <button onclick="startGame()">시작</button>
 </div>
 
+<!-- 게임 -->
 <div id="box" class="hidden">
 <h3><span id="timeUI">🌞 DAY</span> | 생존 <span id="days">1</span>일</h3>
 
@@ -51,7 +52,7 @@ Gold <span id="gold">0</span><br>
 Items: <span id="items">없음</span>
 </div>
 
-<div id="log">이동하자</div>
+<div id="log">이동해보자</div>
 
 <button onclick="move()">이동</button>
 
@@ -63,7 +64,7 @@ Items: <span id="items">없음</span>
 <button style="margin-top:30px" onclick="location.reload()">처음으로</button>
 </div>
 
-<!-- 패배 -->
+<!-- 사망 -->
 <div id="deadUI" class="hidden">
 <h1>☠️ 사망</h1>
 <div id="deadInfo"></div>
@@ -71,7 +72,7 @@ Items: <span id="items">없음</span>
 </div>
 
 <script>
-let stats={spd:0,hp:0,atk:0}, pt=12;
+let stats={spd:0,hp:0,atk:0}, pt=9;
 let player, monster=null;
 let isDay=true, dayCount=1, turn=0;
 let gold=0, items=[];
@@ -89,7 +90,7 @@ function stat(k,v){
 }
 
 function startGame(){
- if(stats.hp<=0||pt>0)return alert("스탯 확인!");
+ if(stats.hp<=0||pt>0)return alert("스탯을 확인하세요");
  player={...stats,hp:stats.hp};
  startUI.classList.add("hidden");
  box.classList.remove("hidden");
@@ -97,19 +98,17 @@ function startGame(){
 }
 
 function move(){
- let dice=Math.floor(Math.random()*100)+1;
+ let r=Math.random();
 
- // 몬스터 등장
- let monsterChance=isDay?33:66;
- if(dice<=monsterChance){ spawnMonster(); return; }
+ // 몬스터 확률
+ let monsterRate=isDay?0.33:0.66;
+ if(r<monsterRate){ spawnMonster(); return; }
 
- // 고급 상자
- if(dice<=monsterChance+5){ openAdvancedChest(); return; }
+ // 고급 상자 10%
+ if(r<monsterRate+0.10){ openAdvancedChest(); return; }
 
- // 일반 상자
- if(dice<=monsterChance+25){ openChest(); return; }
-
- log("아무 일도 일어나지 않았다.");
+ // 나머지는 일반 상자
+ openChest();
 }
 
 function spawnMonster(){
@@ -134,11 +133,11 @@ function openChest(){
 }
 
 function openAdvancedChest(){
+ log("✨ 고급 상자를 발견했다!");
  if(gold<3 && !items.includes("루비")){
-  log("고급 상자(열 수 없음)");
+  log("열 수 없다 (루비 또는 골드 3)");
   return;
  }
- log("✨ 고급 상자를 열었다!");
  gold>=3?gold-=3:items.splice(items.indexOf("루비"),1);
  items.push("철검");
  update();
