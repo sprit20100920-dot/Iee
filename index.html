@@ -4,323 +4,156 @@
 <meta charset="UTF-8">
 <title>Pixel Rogue RPG</title>
 <style>
-body {
-  background:#111;
-  color:white;
-  font-family:sans-serif;
-  text-align:center;
-}
-#gameBox {
-  width:900px;
-  margin:auto;
-  border:2px solid #555;
-  background:black;
-}
-#topBar {
-  padding:8px;
-  border-bottom:2px solid #444;
-  font-size:20px;
-}
-#statusBar {
-  display:flex;
-  justify-content:space-between;
-  padding:10px;
-}
-.panel {
-  width:45%;
-  border:1px solid #444;
-  padding:8px;
-}
-#battleLog {
-  border-top:2px solid #333;
-  padding:10px;
-  min-height:60px;
-}
-#bottomBar {
-  display:flex;
-  justify-content:space-between;
-  padding:10px;
-}
-#controlUI button {
-  width:60px;
-  height:60px;
-  font-size:26px;
-}
-button {
-  font-size:16px;
-  margin:4px;
-}
-.selected {
-  background:#4caf50;
-}
+body { background:#111; color:white; text-align:center; }
+#gameBox { width:900px; margin:auto; border:2px solid #555; background:black; }
+.panel { width:45%; border:1px solid #444; padding:8px; }
+#statusBar { display:flex; justify-content:space-between; padding:10px; }
+button { font-size:16px; margin:4px; }
 </style>
 </head>
 <body>
 
-<!-- ===== 시작 화면 ===== -->
+<!-- 시작 -->
 <div id="startUI">
-  <h2>스탯 분배 (총 12)</h2>
+<h2>스탯 분배 (12)</h2>
+스피드 <span id="spd">0</span>
+<button onclick="stat('spd',1)">+</button>
+<button onclick="stat('spd',-1)">-</button><br>
 
-  <p>스피드:
-    <span id="spd">0</span>
-    <button onclick="stat('spd',1)">+</button>
-    <button onclick="stat('spd',-1)">-</button>
-  </p>
+체력 <span id="hpStat">0</span>
+<button onclick="stat('hp',1)">+</button>
+<button onclick="stat('hp',-1)">-</button><br>
 
-  <p>체력:
-    <span id="hpStat">0</span>
-    <button onclick="stat('hp',1)">+</button>
-    <button onclick="stat('hp',-1)">-</button>
-  </p>
+공격 <span id="atkStat">0</span>
+<button onclick="stat('atk',1)">+</button>
+<button onclick="stat('atk',-1)">-</button><br>
 
-  <p>공격:
-    <span id="atkStat">0</span>
-    <button onclick="stat('atk',1)">+</button>
-    <button onclick="stat('atk',-1)">-</button>
-  </p>
-
-  <p>남은 포인트: <span id="pt">12</span></p>
-  <button onclick="startGame()">게임 시작</button>
+남은 포인트: <span id="pt">12</span><br>
+<button onclick="startGame()">게임 시작</button>
 </div>
 
-<!-- ===== 게임 화면 ===== -->
+<!-- 게임 -->
 <div id="gameBox" style="display:none;">
+<div id="topBar">DAY</div>
 
-  <div id="topBar">🌞 DAY</div>
-
-  <div id="statusBar">
-    <div class="panel">
-      <b>PLAYER</b><br>
-      체력: <span id="pHp"></span><br>
-      공격: <span id="pAtk"></span><br>
-      스피드: <span id="pSpd"></span>
-    </div>
-
-    <div class="panel">
-      <b>MONSTER</b><br>
-      <span id="mInfo">없음</span>
-    </div>
-  </div>
-
-  <div id="battleLog">탐험을 시작했다.</div>
-
-  <div id="bottomBar">
-    <div id="controlUI">
-      <button onclick="move()">⬆️</button><br>
-      <button onclick="move()">⬅️</button>
-      <button onclick="move()">⬇️</button>
-      <button onclick="move()">➡️</button>
-    </div>
-
-    <div>
-      <button onclick="toggleInv()">🎒 인벤토리</button><br>
-      <button onclick="resetGame()">⏮ 처음으로</button>
-    </div>
-  </div>
+<div id="statusBar">
+<div class="panel">
+<b>PLAYER</b><br>
+HP <span id="pHp"></span><br>
+ATK <span id="pAtk"></span><br>
+SPD <span id="pSpd"></span>
 </div>
 
-<!-- ===== 인벤토리 ===== -->
-<div id="invUI" style="display:none;">
-  <h3>🎒 인벤토리</h3>
-  <p id="goldText"></p>
-  <div id="items"></div>
-  <p id="desc"></p>
-  <button onclick="useItem()">사용</button>
-  <button onclick="toggleInv()">닫기</button>
+<div class="panel">
+<b>MONSTER</b><br>
+<span id="mInfo">없음</span>
+</div>
 </div>
 
-<!-- ===== 패배 ===== -->
+<div id="battleLog">탐험 중...</div>
+
+<div>
+<button onclick="move()">이동</button>
+</div>
+
+<div id="battleUI" style="display:none;">
+<button onclick="playerAttack()">⚔️ 공격</button>
+<button onclick="escape()">🏃 도망</button>
+</div>
+
+<button onclick="resetGame()">처음으로</button>
+</div>
+
+<!-- 패배 -->
 <div id="gameOverUI" style="display:none;">
-  <h1>💀 패배</h1>
-  <button onclick="resetGame()">다시 시작</button>
+<h1>💀 패배</h1>
+<button onclick="resetGame()">다시 시작</button>
 </div>
 
 <script>
-/* ===== 초기 상태 ===== */
-let statPt = 12;
-let stats = { spd:0, hp:0, atk:0 };
+let stats={spd:0,hp:0,atk:0}, statPt=12;
+let player, monster=null, inBattle=false;
+let day=true, turn=0;
 
-let player, monster = null;
-let inBattle = false;
-
-let time = { day:true, turn:0 };
-let inventory = [];
-let cursor = 0;
-let gold = 0;
-
-/* ===== 초기 UI 강제 세팅 ===== */
-document.getElementById("spd").innerText = 0;
-document.getElementById("hpStat").innerText = 0;
-document.getElementById("atkStat").innerText = 0;
-document.getElementById("pt").innerText = statPt;
-
-/* ===== 스탯 분배 ===== */
 function stat(k,v){
-  if(statPt - v < 0) return;
-  if(stats[k] + v < 0) return;
-
-  stats[k] += v;
-  statPt -= v;
-
-  document.getElementById("spd").innerText = stats.spd;
-  document.getElementById("hpStat").innerText = stats.hp;
-  document.getElementById("atkStat").innerText = stats.atk;
-  document.getElementById("pt").innerText = statPt;
+ if(statPt-v<0||stats[k]+v<0) return;
+ stats[k]+=v; statPt-=v;
+ spd.innerText=stats.spd;
+ hpStat.innerText=stats.hp;
+ atkStat.innerText=stats.atk;
+ pt.innerText=statPt;
 }
 
-/* ===== 게임 시작 ===== */
 function startGame(){
-  if(statPt > 0){
-    alert("포인트를 모두 사용하세요");
-    return;
-  }
-
-  player = {
-    hp: stats.hp + 10,
-    atk: stats.atk + 1,
-    spd: stats.spd
-  };
-
-  document.getElementById("startUI").style.display = "none";
-  document.getElementById("gameBox").style.display = "block";
-  updateUI();
+ if(statPt>0) return alert("포인트 다 써!");
+ player={hp:stats.hp,atk:stats.atk,spd:stats.spd};
+ startUI.style.display="none";
+ gameBox.style.display="block";
+ updateUI();
 }
 
-/* ===== 리셋 ===== */
-function resetGame(){
-  location.reload();
-}
-
-/* ===== 탐험 ===== */
 function move(){
-  if(inBattle) return;
-
-  // 무조건 몬스터 or 상자
-  if(Math.random() < 0.6){
-    spawnMonster();
-  } else {
-    openChest();
-  }
+ if(inBattle) return;
+ spawnMonster();
 }
 
-/* ===== 몬스터 ===== */
 function spawnMonster(){
-  monster = {
-    hp: time.day ? 6 : 9,
-    atk: time.day ? 2 : 4,
-    spd: 1
-  };
-  inBattle = true;
-  log("몬스터가 나타났다!");
-  battleTurn();
+ monster={
+  hp: day?6:9,
+  atk: day?2:4,
+  spd:1
+ };
+ inBattle=true;
+ battleUI.style.display="block";
+ log("몬스터 등장!");
+ updateUI();
 }
 
-/* ===== 전투 턴 ===== */
-function battleTurn(){
-  if(player.spd >= monster.spd){
-    monster.hp -= player.atk;
-    if(monster.hp <= 0) return winBattle();
-    player.hp -= monster.atk;
-  } else {
-    player.hp -= monster.atk;
-    if(player.hp <= 0) return gameOver();
-    monster.hp -= player.atk;
-  }
-
-  if(player.hp <= 0) return gameOver();
-  updateUI();
+function playerAttack(){
+ if(!monster) return;
+ monster.hp-=player.atk;
+ if(monster.hp<=0) return win();
+ monsterAttack();
 }
 
-/* ===== 승리 ===== */
-function winBattle(){
-  log("몬스터를 쓰러뜨렸다!");
-  monster = null;
-  inBattle = false;
-
-  time.turn++;
-  if(time.turn >= 5){
-    time.turn = 0;
-    time.day = !time.day;
-  }
-
-  updateUI();
+function monsterAttack(){
+ player.hp-=monster.atk;
+ if(player.hp<=0) return gameOver();
+ updateUI();
 }
 
-/* ===== 상자 ===== */
-function openChest(){
-  let d = Math.floor(Math.random()*6) + 1;
-
-  if(d <= 2){
-    inventory.push({ name:"나뭇가지", desc:"+1 공격" });
-    log("나뭇가지를 얻었다!");
-  }
-  else if(d <= 4){
-    gold++;
-    log("골드를 얻었다!");
-  }
-  else {
-    monster = { hp:1, atk:1, spd:99 };
-    inBattle = true;
-    log("미믹이다!");
-    battleTurn();
-  }
-
-  updateUI();
+function win(){
+ log("승리!");
+ monster=null;
+ inBattle=false;
+ battleUI.style.display="none";
+ turn++;
+ if(turn>=5){turn=0; day=!day;}
+ updateUI();
 }
 
-/* ===== 인벤토리 ===== */
-function toggleInv(){
-  let ui = document.getElementById("invUI");
-  ui.style.display = ui.style.display === "block" ? "none" : "block";
-  renderInv();
-}
-function renderInv(){
-  document.getElementById("goldText").innerText = "💰 " + gold;
-  let el = document.getElementById("items");
-  el.innerHTML = "";
-
-  inventory.forEach((it,i)=>{
-    let d = document.createElement("div");
-    d.innerText = (i===cursor?"▶ ":"  ") + it.name;
-    if(i===cursor) d.className="selected";
-    el.appendChild(d);
-  });
-
-  document.getElementById("desc").innerText =
-    inventory[cursor]?.desc || "";
-}
-function useItem(){
-  let it = inventory[cursor];
-  if(!it) return;
-
-  if(it.name==="나뭇가지") player.atk++;
-
-  inventory.splice(cursor,1);
-  cursor = 0;
-  renderInv();
+function escape(){
+ log("도망쳤다!");
+ monster=null;
+ inBattle=false;
+ battleUI.style.display="none";
 }
 
-/* ===== 패배 ===== */
 function gameOver(){
-  document.getElementById("gameBox").style.display="none";
-  document.getElementById("gameOverUI").style.display="block";
+ gameBox.style.display="none";
+ gameOverUI.style.display="block";
 }
 
-/* ===== UI ===== */
 function updateUI(){
-  document.getElementById("topBar").innerText =
-    time.day ? "🌞 DAY" : "🌙 NIGHT";
-
-  document.getElementById("pHp").innerText = player.hp;
-  document.getElementById("pAtk").innerText = player.atk;
-  document.getElementById("pSpd").innerText = player.spd;
-
-  document.getElementById("mInfo").innerText =
-    monster ? `체력:${monster.hp} 공격:${monster.atk}` : "없음";
+ topBar.innerText=day?"🌞 DAY":"🌙 NIGHT";
+ pHp.innerText=player.hp;
+ pAtk.innerText=player.atk;
+ pSpd.innerText=player.spd;
+ mInfo.innerText=monster?`HP ${monster.hp} ATK ${monster.atk}`:"없음";
 }
-function log(t){
-  document.getElementById("battleLog").innerText = t;
-}
+
+function log(t){battleLog.innerText=t;}
+function resetGame(){location.reload();}
 </script>
 </body>
 </html>
