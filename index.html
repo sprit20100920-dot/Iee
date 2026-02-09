@@ -14,7 +14,7 @@ button{font-size:16px;margin:4px;}
 </style>
 </head>
 
-<body class="night">
+<body class="day">
 
 <!-- 시작 화면 -->
 <div id="startUI">
@@ -40,7 +40,7 @@ button{font-size:16px;margin:4px;}
 <div id="gameBox" class="hidden">
 
 <h3>
-<span id="dayUI">🌙 NIGHT</span> |
+<span id="dayUI">🌞 DAY</span> |
 생존 일수: <span id="dayCount">1</span>
 </h3>
 
@@ -67,21 +67,20 @@ Gold: <span id="goldUI">0</span><br>
 
 <button onclick="move()">이동</button>
 
-<!-- 전투 버튼 -->
+<!-- 전투 -->
 <div id="battleUI" class="hidden">
 <button onclick="playerAttack()">⚔️ 공격</button>
 <button onclick="escape()">🏃 도망</button>
 </div>
 
-<!-- 상자 버튼 -->
+<!-- 상자 -->
 <div id="chestUI" class="hidden">
 <button onclick="openChest()">열기</button>
 <button onclick="leaveChest()">도망</button>
 </div>
 
 <br><br>
-<button onclick="resetGame()">처음으로</button>
-
+<button style="margin-top:30px;" onclick="resetGame()">처음으로</button>
 </div>
 
 <!-- 패배 -->
@@ -91,17 +90,17 @@ Gold: <span id="goldUI">0</span><br>
 </div>
 
 <script>
-/* ====== 기본 데이터 ====== */
+/* ===== 기본 ===== */
 let stats={spd:0,hp:0,atk:0}, statPt=12;
 let player, monster=null;
-let day=false, turn=0, surviveDay=1;
+let isDay=true, turn=0, surviveDay=1;
 let inBattle=false, chestWaiting=false;
 
 let gold=0;
 let sticks=0;
-let activeSticks=[]; // {turns:3}
+let activeSticks=[];
 
-/* ====== 시작 ====== */
+/* ===== 스탯 ===== */
 function stat(k,v){
  if(statPt-v<0||stats[k]+v<0) return;
  stats[k]+=v; statPt-=v;
@@ -113,20 +112,20 @@ function stat(k,v){
 
 function startGame(){
  if(stats.hp<=0) return alert("체력은 1 이상이어야 합니다!");
- if(statPt>0) return alert("포인트를 다 사용하세요!");
+ if(statPt>0) return alert("포인트를 다 써야 합니다!");
  player={hp:stats.hp,atk:stats.atk,spd:stats.spd};
  startUI.classList.add("hidden");
  gameBox.classList.remove("hidden");
  updateUI();
 }
 
-/* ====== 이동 ====== */
+/* ===== 이동 ===== */
 function move(){
  if(inBattle||chestWaiting) return;
  Math.random()<0.6 ? spawnMonster() : findChest();
 }
 
-/* ====== 상자 ====== */
+/* ===== 상자 ===== */
 function findChest(){
  chestWaiting=true;
  log("상자를 발견했다!");
@@ -139,23 +138,18 @@ function openChest(){
  let dice=Math.floor(Math.random()*6)+1;
 
  if(dice<=2){
-  if(sticks>=3){
-   log("나뭇가지를 더 들 수 없다!");
-  }else{
-   sticks++;
-   log("나뭇가지를 얻었다!");
-  }
+  if(sticks>=3) log("나뭇가지를 더 들 수 없다!");
+  else{sticks++; log("나뭇가지 획득!");}
  }
  else if(dice<=4){
-  gold++;
-  log("골드를 발견했다!");
+  gold++; log("골드 +1");
  }
  else{
   monster={hp:1,atk:1,spd:99};
   inBattle=true;
   battleUI.classList.remove("hidden");
-  log("미믹이다! 선공!");
-  monsterAttack();
+  log("미믹이다!");
+  if(monster.spd>player.spd) monsterAttack();
  }
  updateUI();
 }
@@ -166,20 +160,21 @@ function leaveChest(){
  log("상자를 무시했다.");
 }
 
-/* ====== 몬스터 ====== */
+/* ===== 몬스터 ===== */
 function spawnMonster(){
  monster={
-  hp: day?8:6,
-  atk: day?3:2,
-  spd: day?2:1
+  hp: isDay?6:8,
+  atk: isDay?2:3,
+  spd: isDay?1:2
  };
  inBattle=true;
  battleUI.classList.remove("hidden");
  log("몬스터 등장!");
+ if(monster.spd>player.spd) monsterAttack();
  updateUI();
 }
 
-/* ====== 전투 ====== */
+/* ===== 전투 ===== */
 function playerAttack(){
  monster.hp-=player.atk;
  if(monster.hp<=0) return win();
@@ -195,36 +190,34 @@ function monsterAttack(){
 function escape(){
  let dice=Math.floor(Math.random()*6)+1;
  log("도망 시도 🎲 "+dice);
- if(dice<=4){
-  log("도망 실패!");
-  monsterAttack();
- }else{
-  win(true);
- }
+ if(dice<=4){log("도망 실패!"); monsterAttack();}
+ else win(true);
 }
 
-function win(escape=false){
+function win(escaped=false){
  monster=null;
  inBattle=false;
  battleUI.classList.add("hidden");
  processStickTurns();
+
  turn++;
  if(turn>=5){
   turn=0;
-  day=!day;
-  surviveDay++;
+  if(isDay) isDay=false;
+  else{ isDay=true; surviveDay++; }
  }
- log(escape?"도망 성공!":"승리!");
+
+ log(escaped?"도망 성공!":"승리!");
  updateUI();
 }
 
-/* ====== 나뭇가지 ====== */
+/* ===== 나뭇가지 ===== */
 function useStick(){
  if(sticks<=0) return;
  sticks--;
  player.atk++;
  activeSticks.push({turns:3});
- log("공격력 +1 (3턴)");
+ log("공격 +1 (3턴)");
  updateUI();
 }
 
@@ -233,16 +226,13 @@ function processStickTurns(){
  let before=activeSticks.length;
  activeSticks=activeSticks.filter(s=>s.turns>0);
  let removed=before-activeSticks.length;
- if(removed>0){
-  player.atk-=removed;
-  log("나뭇가지 효과 종료");
- }
+ if(removed>0){ player.atk-=removed; log("나뭇가지 효과 종료"); }
 }
 
-/* ====== UI ====== */
+/* ===== UI ===== */
 function updateUI(){
- document.body.className=day?"day":"night";
- dayUI.innerText=day?"🌞 DAY":"🌙 NIGHT";
+ document.body.className=isDay?"day":"night";
+ dayUI.innerText=isDay?"🌞 DAY":"🌙 NIGHT";
  dayCount.innerText=surviveDay;
 
  pHp.innerText=player.hp;
@@ -257,12 +247,10 @@ function updateUI(){
 }
 
 function log(t){battleLog.innerText=t;}
-
 function gameOver(){
  gameBox.classList.add("hidden");
  gameOverUI.classList.remove("hidden");
 }
-
 function resetGame(){location.reload();}
 </script>
 </body>
