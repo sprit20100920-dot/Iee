@@ -49,8 +49,10 @@ SPD <span id="pSpd"></span>
 </div>
 
 <div class="panel">
-Gold <span id="gold">0</span><br>
-Items: <span id="itemsUI">없음</span>
+<b>INVENTORY</b><br>
+Gold: <span id="gold">0</span><br>
+<span id="itemsUI">없음</span><br>
+<button onclick="useBranch()">🌿 나뭇가지 사용</button>
 </div>
 
 <div id="log">이동하자</div>
@@ -108,7 +110,7 @@ function move(){
  let r=Math.random();
  let monsterRate=isDay?0.33:0.66;
  if(r<monsterRate){ spawnMonster(); return; }
- if(r<monsterRate+0.10){ findBox("advanced"); return; }
+ if(r<monsterRate+0.15){ findBox("advanced"); return; }
  findBox("normal");
 }
 
@@ -126,14 +128,10 @@ function openBox(){
  if(boxType==="normal"){
   let d=Math.floor(Math.random()*6)+1;
   if(d<=2){
-    if(items.branch.count>=3){
-      log("🌿 나뭇가지가 너무 많다!");
-    }else{
+    if(items.branch.count<3){
       items.branch.count++;
-      items.branch.turns.push(3);
-      player.atk++;
-      log("🌿 나뭇가지 획득! (공격 +1)");
-    }
+      log("🌿 나뭇가지 획득!");
+    }else log("🌿 더 가질 수 없다");
   }
   else if(d<=4){
     gold++;
@@ -142,13 +140,17 @@ function openBox(){
   else{
     log("😈 미믹이다!");
     spawnMimic();
+    boxType=null;
+    update();
+    return;
   }
  }
 
  if(boxType==="advanced"){
   if(gold<3){
-    log("열 수 없다 (골드 3 필요)");
+    log("골드가 부족하다");
     boxType=null;
+    update();
     return;
   }
   gold-=3;
@@ -162,8 +164,17 @@ function openBox(){
 
 function cancelBox(){
  choiceUI.classList.add("hidden");
- log("조심히 물러났다");
+ log("물러났다");
  boxType=null;
+}
+
+function useBranch(){
+ if(items.branch.count<=0){ log("나뭇가지가 없다"); return; }
+ items.branch.count--;
+ items.branch.turns.push(3);
+ player.atk++;
+ log("🌿 나뭇가지 사용! (공격 +1, 3턴)");
+ update();
 }
 
 function spawnMonster(){
@@ -222,7 +233,6 @@ function processItemTurns(){
   items.branch.turns[i]--;
   if(items.branch.turns[i]<=0){
     items.branch.turns.splice(i,1);
-    items.branch.count--;
     player.atk--;
     log("🌿 나뭇가지가 부서졌다!");
   }
