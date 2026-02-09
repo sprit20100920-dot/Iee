@@ -83,11 +83,15 @@ let stats={spd:0,hp:0,atk:0}, pt=10;
 let player, monster=null;
 let isDay=true, dayCount=1, turn=0;
 let gold=0;
-let items={ branch:{count:0,turns:[]} };
+let items={
+  branch:{count:0,turns:[]},
+  ruby:0
+};
 let stunned=false;
 let killedBy="";
 let boxType=null;
 
+/* ---------- 스탯 ---------- */
 function stat(k,v){
  if(k==="hp" && stats.hp+v>9) return;
  if(pt-v<0||stats[k]+v<0) return;
@@ -106,6 +110,7 @@ function startGame(){
  update();
 }
 
+/* ---------- 이동 ---------- */
 function move(){
  let r=Math.random();
  let monsterRate=isDay?0.33:0.66;
@@ -114,6 +119,7 @@ function move(){
  findBox("normal");
 }
 
+/* ---------- 상자 ---------- */
 function findBox(type){
  boxType=type;
  choiceUI.classList.remove("hidden");
@@ -127,11 +133,12 @@ function openBox(){
 
  if(boxType==="normal"){
   let d=Math.floor(Math.random()*6)+1;
+
   if(d<=2){
     if(items.branch.count<3){
       items.branch.count++;
       log("🌿 나뭇가지 획득!");
-    }else log("🌿 더 가질 수 없다");
+    } else log("🌿 더 가질 수 없다");
   }
   else if(d<=4){
     gold++;
@@ -147,13 +154,18 @@ function openBox(){
  }
 
  if(boxType==="advanced"){
-  if(gold<3){
-    log("골드가 부족하다");
+  if(items.ruby>0){
+    items.ruby--;
+  }
+  else if(gold>=3){
+    gold-=3;
+  }
+  else{
+    log("루비 또는 골드가 부족하다");
     boxType=null;
     update();
     return;
   }
-  gold-=3;
   player.atk++;
   log("✨ 철검 획득! (공격 +1)");
  }
@@ -164,10 +176,11 @@ function openBox(){
 
 function cancelBox(){
  choiceUI.classList.add("hidden");
- log("물러났다");
+ log("조심히 물러났다");
  boxType=null;
 }
 
+/* ---------- 아이템 ---------- */
 function useBranch(){
  if(items.branch.count<=0){ log("나뭇가지가 없다"); return; }
  items.branch.count--;
@@ -177,6 +190,7 @@ function useBranch(){
  update();
 }
 
+/* ---------- 몬스터 ---------- */
 function spawnMonster(){
  let r=Math.random();
  if(r<0.33) monster={name:"포이즌 플라워",hp:6,atk:0,spd:0,type:1};
@@ -189,7 +203,7 @@ function spawnMonster(){
 }
 
 function spawnMimic(){
- monster={name:"미믹",hp:5,atk:2,spd:2,type:4};
+ monster={name:"미믹",hp:5,atk:2,spd:99,type:4}; // 항상 선공
  battleUI.classList.remove("hidden");
  firstStrike();
  update();
@@ -200,6 +214,7 @@ function firstStrike(){
  else if(monster.spd===player.spd && monster.hp<player.hp) monsterAttack();
 }
 
+/* ---------- 전투 ---------- */
 function attack(){
  if(stunned){stunned=false;log("감전! 공격 불가"); monsterAttack(); return;}
  monster.hp-=player.atk;
@@ -245,6 +260,7 @@ function escape(){
  else win();
 }
 
+/* ---------- 패배 ---------- */
 function die(){
  killedBy=monster.name;
  box.classList.add("hidden");
@@ -252,6 +268,7 @@ function die(){
  deadInfo.innerHTML=`${dayCount}일째<br>${killedBy}에게 쓰러졌다`;
 }
 
+/* ---------- UI ---------- */
 function update(){
  document.body.className=isDay?"day":"night";
  timeUI.innerText=isDay?"🌞 DAY":"🌙 NIGHT";
@@ -261,9 +278,10 @@ function update(){
  pSpd.innerText=player.spd;
  mInfo.innerText=monster?`${monster.name} HP:${monster.hp} ATK:${monster.atk} SPD:${monster.spd}`:"없음";
  gold.innerText=gold;
- itemsUI.innerText=items.branch.count>0?`나뭇가지:${items.branch.count}`:"없음";
+
+ let inv=[];
+ if(items.branch.count>0) inv.push(`나뭇가지:${items.branch.count}`);
+ if(items.ruby>0) inv.push(`루비:${items.ruby}`);
+ itemsUI.innerText=inv.length?inv.join(", "):"없음";
 }
 function log(t){document.getElementById("log").innerHTML=t;}
-</script>
-</body>
-</html>
