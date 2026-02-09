@@ -2,39 +2,44 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>Rogue RPG</title>
+<title>Pixel Rogue RPG</title>
 <style>
 body{text-align:center;font-family:sans-serif;}
-.day{background:#f2f2f2;color:black;}
-.night{background:#111;color:white;}
-#box{width:900px;margin:auto;border:2px solid #555;padding:10px;}
-.panel{border:1px solid #444;margin:6px;padding:6px;}
+.day{background:#f5f5f5;color:#000;}
+.night{background:#111;color:#fff;}
+#game{width:900px;margin:auto;border:2px solid #444;padding:10px;}
+.panel{border:1px solid #666;margin:6px;padding:6px;}
 button{margin:4px;font-size:15px;}
 .hidden{display:none;}
+.select{border:2px solid red;}
 .red{color:red;font-weight:bold;}
 </style>
 </head>
+
 <body class="day">
 
 <!-- 시작 -->
 <div id="startUI">
 <h2>스탯 분배 (총 10)</h2>
-SPD <span id="spd">0</span>
-<button onclick="stat('spd',1)">+</button>
-<button onclick="stat('spd',-1)">-</button><br>
-HP <span id="hp">0</span> (최대 9)
-<button onclick="stat('hp',1)">+</button>
-<button onclick="stat('hp',-1)">-</button><br>
-ATK <span id="atk">0</span>
-<button onclick="stat('atk',1)">+</button>
-<button onclick="stat('atk',-1)">-</button><br>
-남은 포인트 <span id="pt">10</span><br>
-<button onclick="startGame()">시작</button>
+SPD <span id="spdVal">0</span>
+<button onclick="addStat('spd',1)">+</button>
+<button onclick="addStat('spd',-1)">-</button><br>
+HP <span id="hpVal">0</span>
+<button onclick="addStat('hp',1)">+</button>
+<button onclick="addStat('hp',-1)">-</button><br>
+ATK <span id="atkVal">0</span>
+<button onclick="addStat('atk',1)">+</button>
+<button onclick="addStat('atk',-1)">-</button><br>
+남은 포인트 <span id="ptVal">10</span><br><br>
+<button onclick="startGame()">게임 시작</button>
 </div>
 
 <!-- 게임 -->
-<div id="box" class="hidden">
-<h3><span id="timeUI">🌞 DAY</span> | 생존 <span id="days">1</span>일</h3>
+<div id="game" class="hidden">
+<h3>
+<span id="timeUI">🌞 DAY</span> |
+생존 <span id="dayCnt">1</span>일
+</h3>
 
 <div class="panel">
 <b>PLAYER</b><br>
@@ -50,25 +55,44 @@ SPD <span id="pSpd"></span>
 
 <div class="panel">
 <b>INVENTORY</b><br>
-Gold: <span id="gold">0</span><br>
-<span id="itemsUI">없음</span><br>
-<button onclick="useBranch()">🌿 나뭇가지 사용</button>
+Gold: <span id="goldUI">0</span><br>
+<div id="invUI"></div>
+<button onclick="openInventory()">인벤토리</button>
 </div>
 
 <div id="log">이동하자</div>
 <button onclick="move()">이동</button>
 
-<div id="choiceUI" class="hidden">
-<button onclick="openBox()">열기</button>
-<button onclick="cancelBox()">도망</button>
-</div>
-
+<!-- 전투 -->
 <div id="battleUI" class="hidden">
 <button onclick="attack()">공격</button>
 <button onclick="escape()">도망</button>
 </div>
 
-<button style="margin-top:40px" onclick="location.reload()">처음으로</button>
+<!-- 상자 -->
+<div id="boxUI" class="hidden">
+<button onclick="openBox()">열기</button>
+<button onclick="closeBox()">도망</button>
+</div>
+
+<!-- 인벤토리 UI -->
+<div id="inventoryUI" class="hidden">
+<h3>인벤토리</h3>
+<div id="invSelect"></div>
+<button onclick="useItem()">사용</button>
+<button onclick="closeInventory()">닫기</button><br>
+<button onclick="invMove(-1)">◀</button>
+<button onclick="invMove(1)">▶</button>
+</div>
+
+<!-- 고급 상자 -->
+<div id="advancedUI" class="hidden">
+<h3 class="red">🔴 고급 상자</h3>
+<div id="advItems"></div>
+<button onclick="pickAdv()">선택</button>
+</div>
+
+<button style="margin-top:30px" onclick="location.reload()">처음으로</button>
 </div>
 
 <!-- 사망 -->
@@ -79,209 +103,210 @@ Gold: <span id="gold">0</span><br>
 </div>
 
 <script>
+/* ===== 스탯 ===== */
 let stats={spd:0,hp:0,atk:0}, pt=10;
-let player, monster=null;
-let isDay=true, dayCount=1, turn=0;
-let gold=0;
-let items={
-  branch:{count:0,turns:[]},
-  ruby:0
-};
-let stunned=false;
-let killedBy="";
-let boxType=null;
+const spdVal=spdVal=document.getElementById("spdVal");
+const hpVal=document.getElementById("hpVal");
+const atkVal=document.getElementById("atkVal");
+const ptVal=document.getElementById("ptVal");
 
-/* ---------- 스탯 ---------- */
-function stat(k,v){
- if(k==="hp" && stats.hp+v>9) return;
- if(pt-v<0||stats[k]+v<0) return;
+function addStat(k,v){
+ if(v>0 && pt<=0) return;
+ if(v<0 && stats[k]<=0) return;
  stats[k]+=v; pt-=v;
- spd.innerText=stats.spd;
- hp.innerText=stats.hp;
- atk.innerText=stats.atk;
- pt.innerText=pt;
+ spdVal.innerText=stats.spd;
+ hpVal.innerText=stats.hp;
+ atkVal.innerText=stats.atk;
+ ptVal.innerText=pt;
 }
 
+let player, monster=null;
+let gold=0, day=1, isDay=true, turn=0;
+let items={branch:{count:0,turns:[]}, potion:0, ruby:0};
+let invList=[], invIndex=0;
+let boxType=null, stunned=false;
+
+/* ===== 시작 ===== */
 function startGame(){
- if(stats.hp<=0||pt>0) return alert("스탯 확인!");
+ if(stats.hp<=0) return alert("체력은 최소 1");
  player={...stats,hp:stats.hp};
  startUI.classList.add("hidden");
- box.classList.remove("hidden");
+ game.classList.remove("hidden");
  update();
 }
 
-/* ---------- 이동 ---------- */
+/* ===== 이동 ===== */
 function move(){
  let r=Math.random();
- let monsterRate=isDay?0.33:0.66;
- if(r<monsterRate){ spawnMonster(); return; }
- if(r<monsterRate+0.15){ findBox("advanced"); return; }
+ let mRate=isDay?4/12:8/12;
+ if(r<mRate){ spawnMonster(); return; }
+ if(r<mRate+0.15){ findBox("advanced"); return; }
  findBox("normal");
 }
 
-/* ---------- 상자 ---------- */
+/* ===== 상자 ===== */
 function findBox(type){
  boxType=type;
- choiceUI.classList.remove("hidden");
+ boxUI.classList.remove("hidden");
  log(type==="advanced"
-  ? '<span class="red">🔴 고급 상자를 발견했다!</span>'
-  : "📦 상자를 발견했다!");
+  ? "<span class='red'>고급 상자를 발견했다!</span>"
+  : "상자를 발견했다!");
 }
 
 function openBox(){
- choiceUI.classList.add("hidden");
-
+ boxUI.classList.add("hidden");
  if(boxType==="normal"){
   let d=Math.floor(Math.random()*6)+1;
-
-  if(d<=2){
-    if(items.branch.count<3){
-      items.branch.count++;
-      log("🌿 나뭇가지 획득!");
-    } else log("🌿 더 가질 수 없다");
-  }
-  else if(d<=4){
+  if(d<=2 && items.branch.count<3){
+    items.branch.count++;
+    log("🌿 나뭇가지 획득");
+  }else if(d<=4){
     gold++;
-    log("💰 골드 1 획득");
-  }
-  else{
-    log("😈 미믹이다!");
-    spawnMimic();
-    boxType=null;
-    update();
-    return;
+    log("💰 골드 획득");
+  }else{
+    spawnMimic(); boxType=null; update(); return;
   }
  }
-
  if(boxType==="advanced"){
-  if(items.ruby>0){
-    items.ruby--;
-  }
-  else if(gold>=3){
-    gold-=3;
-  }
-  else{
-    log("루비 또는 골드가 부족하다");
-    boxType=null;
-    update();
-    return;
-  }
-  player.atk++;
-  log("✨ 철검 획득! (공격 +1)");
+  advancedUI.classList.remove("hidden");
+  return;
  }
+ boxType=null; update();
+}
 
- boxType=null;
+function closeBox(){ boxUI.classList.add("hidden"); boxType=null; }
+
+/* ===== 고급 상자 ===== */
+const advPool=[
+ "포션(+2HP)",
+ "철검(+1ATK)",
+ "낡은방패(+2HP)",
+ "철갑옷(+1HP)",
+ "값싼귀걸이(회피)"
+];
+let advIndex=0;
+
+function pickAdv(){
+ advancedUI.classList.add("hidden");
+ let pick=advPool[advIndex];
+ if(pick.includes("포션")) items.potion++;
+ if(pick.includes("철검")) player.atk++;
+ if(pick.includes("방패")){player.hp+=2;}
+ if(pick.includes("갑옷")){player.hp+=1;}
+ log(pick+" 획득!");
  update();
 }
 
-function cancelBox(){
- choiceUI.classList.add("hidden");
- log("조심히 물러났다");
- boxType=null;
+/* ===== 인벤토리 ===== */
+function openInventory(){
+ inventoryUI.classList.remove("hidden");
+ invList=[];
+ if(items.branch.count>0) invList.push("나뭇가지");
+ if(items.potion>0) invList.push("포션");
+ invIndex=0;
+ renderInv();
 }
 
-/* ---------- 아이템 ---------- */
-function useBranch(){
- if(items.branch.count<=0){ log("나뭇가지가 없다"); return; }
- items.branch.count--;
- items.branch.turns.push(3);
- player.atk++;
- log("🌿 나뭇가지 사용! (공격 +1, 3턴)");
- update();
+function invMove(d){
+ if(invList.length===0) return;
+ invIndex=(invIndex+d+invList.length)%invList.length;
+ renderInv();
 }
 
-/* ---------- 몬스터 ---------- */
+function renderInv(){
+ invSelect.innerHTML="";
+ invList.forEach((it,i)=>{
+  let s=document.createElement("div");
+  s.innerText=it;
+  if(i===invIndex) s.className="select";
+  invSelect.appendChild(s);
+ });
+}
+
+function useItem(){
+ let it=invList[invIndex];
+ if(it==="포션" && items.potion>0){
+  items.potion--; player.hp+=2;
+  log("포션 사용 (+2HP)");
+ }
+ if(it==="나뭇가지" && items.branch.count>0){
+  items.branch.count--;
+  items.branch.turns.push(3);
+  player.atk++;
+  log("나뭇가지 사용 (+1ATK)");
+ }
+ closeInventory(); update();
+}
+
+function closeInventory(){ inventoryUI.classList.add("hidden"); }
+
+/* ===== 몬스터 ===== */
 function spawnMonster(){
- let r=Math.random();
- if(r<0.33) monster={name:"포이즌 플라워",hp:6,atk:0,spd:0,type:1};
- else if(r<0.66) monster={name:"박쥐",hp:3,atk:1,spd:3,type:2};
- else monster={name:"여우",hp:3,atk:3,spd:3,type:3};
+ monster={name:"박쥐",hp:3,atk:1,spd:3};
  battleUI.classList.remove("hidden");
- log(monster.name+" 등장!");
- firstStrike();
- update();
+ log("박쥐 등장!");
+ firstStrike(); update();
 }
 
 function spawnMimic(){
- monster={name:"미믹",hp:5,atk:2,spd:99,type:4}; // 항상 선공
+ monster={name:"미믹",hp:5,atk:2,spd:99};
  battleUI.classList.remove("hidden");
- firstStrike();
- update();
+ log("미믹이다!");
+ firstStrike(); update();
 }
 
 function firstStrike(){
  if(monster.spd>player.spd) monsterAttack();
- else if(monster.spd===player.spd && monster.hp<player.hp) monsterAttack();
 }
 
-/* ---------- 전투 ---------- */
+/* ===== 전투 ===== */
 function attack(){
- if(stunned){stunned=false;log("감전! 공격 불가"); monsterAttack(); return;}
  monster.hp-=player.atk;
  if(monster.hp<=0){ win(); return; }
  monsterAttack();
 }
-
 function monsterAttack(){
- if(monster.type===2 && Math.random()>0.5) stunned=true;
  player.hp-=monster.atk;
  if(player.hp<=0) die();
  update();
 }
-
 function win(){
  log(monster.name+" 처치!");
  monster=null;
  battleUI.classList.add("hidden");
- processItemTurns();
  turn++;
  if(turn>=5){
   turn=0;
-  if(isDay)isDay=false;
-  else{isDay=true;dayCount++;}
+  isDay=!isDay;
+  if(isDay) day++;
  }
  update();
 }
+function escape(){ monsterAttack(); }
 
-function processItemTurns(){
- for(let i=items.branch.turns.length-1;i>=0;i--){
-  items.branch.turns[i]--;
-  if(items.branch.turns[i]<=0){
-    items.branch.turns.splice(i,1);
-    player.atk--;
-    log("🌿 나뭇가지가 부서졌다!");
-  }
- }
-}
-
-function escape(){
- let d=Math.floor(Math.random()*6)+1;
- if(d<=4) monsterAttack();
- else win();
-}
-
-/* ---------- 패배 ---------- */
+/* ===== 패배 ===== */
 function die(){
- killedBy=monster.name;
- box.classList.add("hidden");
+ game.classList.add("hidden");
  deadUI.classList.remove("hidden");
- deadInfo.innerHTML=`${dayCount}일째<br>${killedBy}에게 쓰러졌다`;
+ deadInfo.innerHTML=`${day}일째<br>${monster.name}에게 사망`;
 }
 
-/* ---------- UI ---------- */
+/* ===== UI ===== */
 function update(){
  document.body.className=isDay?"day":"night";
  timeUI.innerText=isDay?"🌞 DAY":"🌙 NIGHT";
- days.innerText=dayCount;
+ dayCnt.innerText=day;
  pHp.innerText=player.hp;
  pAtk.innerText=player.atk;
  pSpd.innerText=player.spd;
- mInfo.innerText=monster?`${monster.name} HP:${monster.hp} ATK:${monster.atk} SPD:${monster.spd}`:"없음";
- gold.innerText=gold;
-
+ mInfo.innerText=monster?`${monster.name} HP:${monster.hp}`:"없음";
+ goldUI.innerText=gold;
  let inv=[];
  if(items.branch.count>0) inv.push(`나뭇가지:${items.branch.count}`);
- if(items.ruby>0) inv.push(`루비:${items.ruby}`);
- itemsUI.innerText=inv.length?inv.join(", "):"없음";
+ if(items.potion>0) inv.push(`포션:${items.potion}`);
+ invUI.innerText=inv.length?inv.join(", "):"없음";
 }
 function log(t){document.getElementById("log").innerHTML=t;}
+</script>
+</body>
+</html>
