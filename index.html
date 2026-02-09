@@ -4,85 +4,53 @@
 <meta charset="UTF-8">
 <title>Pixel Rogue RPG</title>
 <style>
-body{
-  margin:0;
-  background:#111;
-  color:white;
-  text-align:center;
-  font-family:sans-serif;
-}
-.day { background:#eee; color:black; }
-.night { background:#111; color:white; }
-
-#gameBox{
-  width:900px;
-  margin:auto;
-  border:2px solid #555;
-  min-height:500px;
-}
-
-.panel{
-  width:45%;
-  border:1px solid #444;
-  padding:8px;
-}
-
-#statusBar{
-  display:flex;
-  justify-content:space-between;
-  padding:10px;
-}
-
-button{
-  font-size:16px;
-  margin:4px;
-}
+body{margin:0;font-family:sans-serif;text-align:center;}
+.day{background:#eee;color:black;}
+.night{background:#111;color:white;}
+#gameBox{width:900px;margin:auto;border:2px solid #555;}
+.panel{border:1px solid #444;padding:8px;margin:6px;}
+button{font-size:16px;margin:4px;}
 </style>
 </head>
 <body class="night">
 
-<!-- 시작 화면 -->
+<!-- 시작 -->
 <div id="startUI">
 <h2>스탯 분배 (12)</h2>
-
 스피드 <span id="spd">0</span>
 <button onclick="stat('spd',1)">+</button>
 <button onclick="stat('spd',-1)">-</button><br>
-
 체력 <span id="hpStat">0</span>
 <button onclick="stat('hp',1)">+</button>
 <button onclick="stat('hp',-1)">-</button><br>
-
 공격 <span id="atkStat">0</span>
 <button onclick="stat('atk',1)">+</button>
 <button onclick="stat('atk',-1)">-</button><br>
-
-남은 포인트: <span id="pt">12</span><br><br>
+남은 포인트 <span id="pt">12</span><br><br>
 <button onclick="startGame()">게임 시작</button>
 </div>
 
-<!-- 게임 화면 -->
+<!-- 게임 -->
 <div id="gameBox" style="display:none;">
 <h3 id="topBar">🌙 NIGHT</h3>
 
-<div id="statusBar">
 <div class="panel">
 <b>PLAYER</b><br>
-HP: <span id="pHp"></span><br>
-ATK: <span id="pAtk"></span><br>
-SPD: <span id="pSpd"></span>
-</div>
-
-<div class="panel">
-<b>MONSTER</b><br>
-<span id="mInfo">없음</span>
-</div>
+HP <span id="pHp"></span> /
+ATK <span id="pAtk"></span> /
+SPD <span id="pSpd"></span>
 </div>
 
 <div class="panel">
 <b>INVENTORY</b><br>
 Gold: <span id="goldUI">0</span><br>
-<span id="invUI"></span>
+나뭇가지: <span id="stickUI">0</span><br>
+<button onclick="useStick()">나뭇가지 사용</button>
+</div>
+
+<div class="panel">
+<b>MONSTER</b><br>
+<span id="mInfo">없음</span>
 </div>
 
 <div id="battleLog">이동해보자</div>
@@ -107,12 +75,15 @@ Gold: <span id="goldUI">0</span><br>
 <script>
 let stats={spd:0,hp:0,atk:0}, statPt=12;
 let player, monster=null;
-let inBattle=false;
 let day=false, turn=0;
-let inventory=[], gold=0;
+let inBattle=false;
+
+let gold=0;
+let sticks=0;
+let activeSticks=[]; // {turns:3}
 
 function stat(k,v){
- if(statPt-v<0||stats[k]+v<0) return;
+ if(statPt-v<0||stats[k]+v<0)return;
  stats[k]+=v; statPt-=v;
  spd.innerText=stats.spd;
  hpStat.innerText=stats.hp;
@@ -121,7 +92,7 @@ function stat(k,v){
 }
 
 function startGame(){
- if(statPt>0) return alert("포인트를 다 써!");
+ if(statPt>0)return alert("포인트 다 써!");
  player={hp:stats.hp,atk:stats.atk,spd:stats.spd};
  startUI.style.display="none";
  gameBox.style.display="block";
@@ -129,16 +100,12 @@ function startGame(){
 }
 
 function move(){
- if(inBattle) return;
- Math.random()<0.6 ? spawnMonster() : spawnChest();
+ if(inBattle)return;
+ Math.random()<0.6?spawnMonster():spawnChest();
 }
 
 function spawnMonster(){
- monster={
-  hp: day?8:6,
-  atk: day?3:2,
-  spd:1
- };
+ monster={hp:day?8:6,atk:day?3:2};
  inBattle=true;
  battleUI.style.display="block";
  log("몬스터 등장!");
@@ -147,18 +114,22 @@ function spawnMonster(){
 
 function spawnChest(){
  let dice=Math.floor(Math.random()*6)+1;
- log("상자 발견! 🎲 "+dice);
+ log("상자 발견 🎲 "+dice);
 
  if(dice<=2){
-  inventory.push("나뭇가지(+1)");
-  log("나뭇가지 획득!");
+  if(sticks>=3){
+   log("나뭇가지를 더 들 수 없다!");
+  }else{
+   sticks++;
+   log("나뭇가지 획득!");
+  }
  }
  else if(dice<=4){
   gold++;
   log("골드 +1");
  }
  else{
-  monster={hp:1,atk:1,spd:999};
+  monster={hp:1,atk:1};
   inBattle=true;
   battleUI.style.display="block";
   log("미믹이다! 선공!");
@@ -167,15 +138,24 @@ function spawnChest(){
  updateUI();
 }
 
+function useStick(){
+ if(sticks<=0)return;
+ sticks--;
+ player.atk++;
+ activeSticks.push({turns:3});
+ log("나뭇가지 사용! 공격 +1 (3턴)");
+ updateUI();
+}
+
 function playerAttack(){
  monster.hp-=player.atk;
- if(monster.hp<=0) return win();
+ if(monster.hp<=0)return win();
  monsterAttack();
 }
 
 function monsterAttack(){
  player.hp-=monster.atk;
- if(player.hp<=0) return gameOver();
+ if(player.hp<=0)return gameOver();
  updateUI();
 }
 
@@ -185,7 +165,7 @@ function escape(){
  if(dice<=4){
   log("도망 실패!");
   monsterAttack();
- } else {
+ }else{
   win(true);
  }
 }
@@ -194,13 +174,22 @@ function win(escape=false){
  monster=null;
  inBattle=false;
  battleUI.style.display="none";
+ processStickTurns();
  turn++;
- if(turn>=5){
-  turn=0;
-  day=!day;
- }
+ if(turn>=5){turn=0;day=!day;}
  log(escape?"도망 성공!":"승리!");
  updateUI();
+}
+
+function processStickTurns(){
+ activeSticks.forEach(s=>s.turns--);
+ let before=activeSticks.length;
+ activeSticks=activeSticks.filter(s=>s.turns>0);
+ let removed=before-activeSticks.length;
+ if(removed>0){
+  player.atk-=removed;
+  log("나뭇가지 효과가 사라졌다!");
+ }
 }
 
 function updateUI(){
@@ -211,15 +200,15 @@ function updateUI(){
  pSpd.innerText=player.spd;
  mInfo.innerText=monster?`HP ${monster.hp} ATK ${monster.atk}`:"없음";
  goldUI.innerText=gold;
- invUI.innerText=inventory.join(", ");
+ stickUI.innerText=sticks;
 }
 
-function log(t){ battleLog.innerText=t; }
+function log(t){battleLog.innerText=t;}
 function gameOver(){
  gameBox.style.display="none";
  gameOverUI.style.display="block";
 }
-function resetGame(){ location.reload(); }
+function resetGame(){location.reload();}
 </script>
 </body>
 </html>
